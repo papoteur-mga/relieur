@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from glob import glob
 
 import musicxml.xmlelement.xmlelement as mxl  # type: ignore
 from musicxml.parser.parser import parse_musicxml  # type: ignore
@@ -45,30 +46,9 @@ def process_concat(
     concat: tuple[str],
     debug=False,
     ) -> tuple:
-    # get the list of files
-    if len(concat) > 1:
-        # Check that all files exist
-        sorted_list = []
-        for fichier in concat:
-            fichier = fichier.with_suffix(".musicxml")
-            if not fichier.exists():
-                print(f"The file {fichier} does not exist.")
-                return None, 0, 0
-            sorted_list.append(fichier)
-    else:  # If there is only one argument, this is a radical
-        # get the list from radical
-        radical = concat[0]
-        p = Path('.')
-        sorted_list = []
-        files_list = p.glob(f"{radical}*.musicxml")
-        # print(list(files_list))
-        for fichier in files_list:
-            if fichier.is_dir():
-                print(f"{fichier} is a directory.")
-                return None, 0, 0
-            else:
-                sorted_list.append(str(fichier))
-        sorted_list = sorted(sorted_list)
+    sorted_list = get_file_list(concat, debug=debug)
+    if not sorted_list:
+        return None, 0, 0
     # Main file is the first of the list
     main_file = sorted_list[0]
     print(f"Starting with {main_file}")
@@ -136,6 +116,37 @@ def process_concat(
             ip +=1
     return m, len(sorted_list), len(part1.get_children_of_type(mxl.XMLMeasure))
 
+def get_file_list(
+    concat: tuple[str],
+    debug=False,
+    ) -> list[str]:
+    # get the list of files
+    sorted_list = []
+
+    for pattern in concat:
+        if not Path(pattern).suffix:
+            pattern += "*.musicxml"
+        
+        matched_files = list(glob(pattern))
+
+        if len(matched_files) == 0 and debug:
+            print(f"No file found for {pattern}")
+        
+        for fichier in matched_files:
+            if not os.path.exists(fichier):
+                if debug:
+                    print(f"The file {fichier} does not exist.")
+                return None
+            if os.path.isdir(fichier):
+                if debug:
+                    print(f"{fichier} is a directory.")
+                return None
+            
+            sorted_list.append(fichier)
+    if len(sorted_list) == 0:
+        print(f"No files found for {concat}")
+        return None
+    return sorted(sorted_list)
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -151,20 +162,21 @@ def main() -> None:
     parser.add_argument("-o", "--output", type=str, help="File name of output")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args()
-    print(args)
     if not args.concat:
         print("No files list provided nor radical")
         parser.print_help()
         sys.exit(1)
     elif args.concat:
-        m, files, measures = process_concat([Path(x) for x in args.concat], debug=args.debug)
+        m, files, measures = process_concat(args.concat, debug=args.debug)
+        if not m:
+            sys.exit(1)
         print(f"Processed {files} files, getting {measures} measures")
         if args.output:
             xml_path = Path(args.output).with_suffix('.musicxml')
         else:
-            xml_path = Path(__file__).with_suffix('.musicxml')
+            xml_path = Path(os.path.basename(__file__)).with_suffix('.musicxml')
         m.write(xml_path)
-        print(f"Result is in {xml_path}")
+        print(f"Result is in {os.path.abspath(xml_path)}")
     else:
         raise ValueError(f"{args.concat} is not a valid file or directory")
 
