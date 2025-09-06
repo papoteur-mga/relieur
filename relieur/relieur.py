@@ -55,6 +55,7 @@ def process_concat(
     m = parse_musicxml(main_file)
     # look for the last key and last divisions
     last_parts_attributes = []
+    part1 = None  # Initialize part1 to avoid UnboundLocalError
     for part1 in m.get_children_of_type(mxl.XMLPart):
         part_attributes = {}
         for measure in part1.get_children_of_type(mxl.XMLMeasure):
@@ -114,7 +115,7 @@ def process_concat(
                     current_len = len(part1.get_children_of_type(mxl.XMLMeasure))
                 ib += 1
             ip +=1
-    return m, len(sorted_list), len(part1.get_children_of_type(mxl.XMLMeasure))
+    return m, len(sorted_list), len(part1.get_children_of_type(mxl.XMLMeasure)) if part1 else 0
 
 def get_file_list(
     concat: tuple[str],
@@ -126,12 +127,12 @@ def get_file_list(
     for pattern in concat:
         if not Path(pattern).suffix:
             pattern += "*.musicxml"
-        
+
         matched_files = list(glob(pattern))
 
         if len(matched_files) == 0 and debug:
             print(f"No file found for {pattern}")
-        
+
         for fichier in matched_files:
             if not os.path.exists(fichier):
                 if debug:
@@ -141,7 +142,7 @@ def get_file_list(
                 if debug:
                     print(f"{fichier} is a directory.")
                 return None
-            
+
             sorted_list.append(fichier)
     if len(sorted_list) == 0:
         print(f"No files found for {concat}")
