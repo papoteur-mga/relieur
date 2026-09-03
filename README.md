@@ -1,5 +1,5 @@
 # A small tool to merge multiples MusicXML files in a unique one
-
+This project is now archived. The reason is that homr include it directly and can provide a unique musicxml file from multiple files or PDF. See [https://github.com/liebharc/homr/pull/149].
 ## Positional arguments:
   Merge multiple MusicXML files in an unique one. You have to provide a list of files or a radical which is a common starting part of the files names.
 
